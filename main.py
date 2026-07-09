@@ -5,6 +5,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtCore import Qt
 
 from view_strategies import SingleKStrategy, CrossKStrategy
+from export_report import export_to_pdf
 
 
 class MainWindow(QMainWindow):
@@ -135,6 +136,11 @@ class MainWindow(QMainWindow):
         refresh_btn.clicked.connect(self.refresh_layout)
         top.addWidget(refresh_btn)
 
+        export_btn = QPushButton("Export PDF")
+        export_btn.setStyleSheet("background-color: #333333; color: white; padding: 6px;")
+        export_btn.clicked.connect(self.export_pdf)
+        top.addWidget(export_btn)
+
         self.view_mode_box = QComboBox()
         self.view_mode_box.setStyleSheet("background-color: #222222; color: white; padding: 4px; font-weight: bold;")
         self.view_mode_box.currentIndexChanged.connect(self.switch_view_strategy)
@@ -209,6 +215,27 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # CORE LOGIC
     # ------------------------------------------------------------------
+
+    def export_pdf(self):
+        if not self.root or not self.panels:
+            QMessageBox.warning(self, "Export PDF", "No images are currently loaded to export.")
+            return
+
+        default_name = os.path.join(self.root, "workspace_report.pdf")
+        path, _ = QFileDialog.getSaveFileName(self, "Export to PDF", default_name, "PDF Files (*.pdf)")
+        if not path:
+            return
+
+        self.show_loading("Exporting PDF...")
+        try:
+            export_to_pdf(self, path, progress_callback=self.report_progress)
+        except Exception as e:
+            self.show_content()
+            QMessageBox.critical(self, "Export Failed", f"Could not export PDF:\n{e}")
+            return
+
+        self.show_content()
+        QMessageBox.information(self, "Export Complete", f"Report saved to:\n{path}")
 
     def refresh_layout(self):
         """Re-reads files from disk and rebuilds the current view (e.g. after a re-render)."""
