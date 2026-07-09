@@ -17,10 +17,111 @@ class MainWindow(QMainWindow):
         self.root = None
         self.panels = []
 
-        # Enforce pure black application UI stylesheet properties
         self.setStyleSheet("background-color: #000000; color: #ffffff;")
 
-        central = QWidget()
+        # --- STACK: start screen / loading screen / main content ---
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
+
+        self.start_page = self._build_start_page()
+        self.loading_page = self._build_loading_page()
+        self.content_page = self._build_content_page()
+
+        self.stack.addWidget(self.start_page)
+        self.stack.addWidget(self.loading_page)
+        self.stack.addWidget(self.content_page)
+        self.stack.setCurrentWidget(self.start_page)
+
+        # --- THE SCALABILITY LAYER ENGINE CONFIGURATION ---
+        self.view_strategies = {
+            "Single K Directory (Old View)": SingleKStrategy,
+            "Cross-K Normalization (Side-by-Side View)": CrossKStrategy
+        }
+        self.view_mode_box.addItems(list(self.view_strategies.keys()))
+
+        self.current_strategy = self.view_strategies[self.view_mode_box.currentText()](self)
+
+    # ------------------------------------------------------------------
+    # PAGE BUILDERS
+    # ------------------------------------------------------------------
+
+    def _build_start_page(self):
+        page = QWidget()
+        page.setStyleSheet("background-color: #000000;")
+
+        outer = QVBoxLayout(page)
+        outer.addStretch(1)
+
+        title = QLabel("Scalable TIFF Workspace Analyzer")
+        title.setAlignment(Qt.AlignCenter)
+        title.setStyleSheet("font-size: 26px; font-weight: bold; color: #ffffff; margin-bottom: 20px;")
+        outer.addWidget(title)
+
+        row = QHBoxLayout()
+        row.addStretch(1)
+
+        open_btn = QPushButton("Open Workspace Folder")
+        open_btn.setFixedSize(320, 70)
+        open_btn.setStyleSheet(
+            "QPushButton {"
+            "  background-color: #2266cc; color: white; font-size: 16px; font-weight: bold;"
+            "  border-radius: 8px;"
+            "}"
+            "QPushButton:hover { background-color: #2f7ae0; }"
+            "QPushButton:pressed { background-color: #1a4d99; }"
+        )
+        open_btn.clicked.connect(self.open_folder)
+        row.addWidget(open_btn)
+
+        row.addStretch(1)
+        outer.addLayout(row)
+
+        hint = QLabel("Select a folder containing your K test-case directories to begin.")
+        hint.setAlignment(Qt.AlignCenter)
+        hint.setStyleSheet("font-size: 12px; color: #888888; margin-top: 16px;")
+        outer.addWidget(hint)
+
+        outer.addStretch(1)
+        return page
+
+    def _build_loading_page(self):
+        page = QWidget()
+        page.setStyleSheet("background-color: #000000;")
+
+        outer = QVBoxLayout(page)
+        outer.addStretch(1)
+
+        self.loading_label = QLabel("Loading images...")
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #ffffff; margin-bottom: 12px;")
+        outer.addWidget(self.loading_label)
+
+        bar_row = QHBoxLayout()
+        bar_row.addStretch(1)
+
+        self.loading_bar = QProgressBar()
+        self.loading_bar.setFixedWidth(420)
+        self.loading_bar.setFixedHeight(24)
+        self.loading_bar.setRange(0, 1)
+        self.loading_bar.setValue(0)
+        self.loading_bar.setTextVisible(True)
+        self.loading_bar.setStyleSheet(
+            "QProgressBar {"
+            "  background-color: #222222; color: white; border: 1px solid #444444;"
+            "  border-radius: 4px; text-align: center;"
+            "}"
+            "QProgressBar::chunk { background-color: #2266cc; border-radius: 4px; }"
+        )
+        bar_row.addWidget(self.loading_bar)
+
+        bar_row.addStretch(1)
+        outer.addLayout(bar_row)
+
+        outer.addStretch(1)
+        return page
+
+    def _build_content_page(self):
+        page = QWidget()
         layout = QVBoxLayout()
         top = QHBoxLayout()
 
@@ -29,21 +130,16 @@ class MainWindow(QMainWindow):
         open_btn.clicked.connect(self.open_folder)
         top.addWidget(open_btn)
 
-        # --- THE SCALABILITY LAYER ENGINE CONFIGURATION ---
-        # 1. Map readable display modes to their corresponding architectural strategy class rules
-        self.view_strategies = {
-            "Single K Directory (Old View)": SingleKStrategy,
-            "Cross-K Normalization (Side-by-Side View)": CrossKStrategy
-        }
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.setStyleSheet("background-color: #333333; color: white; padding: 6px;")
+        refresh_btn.clicked.connect(self.refresh_layout)
+        top.addWidget(refresh_btn)
 
-        # 2. View Mode Selector Dropdown Box
         self.view_mode_box = QComboBox()
-        self.view_mode_box.addItems(list(self.view_strategies.keys()))
         self.view_mode_box.setStyleSheet("background-color: #222222; color: white; padding: 4px; font-weight: bold;")
         self.view_mode_box.currentIndexChanged.connect(self.switch_view_strategy)
         top.addWidget(self.view_mode_box)
 
-        # 3. Dynamic Strategy Context Secondary Dropdown Control Item
         self.strategy_combobox = QComboBox()
         self.strategy_combobox.setStyleSheet("background-color: #333333; color: white; padding: 4px;")
         self.strategy_combobox.currentTextChanged.connect(self.execute_current_layout)
@@ -81,11 +177,44 @@ class MainWindow(QMainWindow):
         self.scroll.setWidgetResizable(True)
         layout.addWidget(self.scroll)
 
-        central.setLayout(layout)
-        self.setCentralWidget(central)
+        page.setLayout(layout)
+        return page
 
-        # Instantiate our current working strategy rule runtime tracking state
-        self.current_strategy = self.view_strategies[self.view_mode_box.currentText()](self)
+    # ------------------------------------------------------------------
+    # PAGE SWITCHING / PROGRESS
+    # ------------------------------------------------------------------
+
+    def show_start(self):
+        self.stack.setCurrentWidget(self.start_page)
+
+    def show_loading(self, text="Loading images..."):
+        self.loading_label.setText(text)
+        self.loading_bar.setRange(0, 1)
+        self.loading_bar.setValue(0)
+        self.stack.setCurrentWidget(self.loading_page)
+        QApplication.processEvents()
+
+    def show_content(self):
+        self.stack.setCurrentWidget(self.content_page)
+
+    def report_progress(self, value, maximum):
+        """Called by view strategies as each test-case row finishes loading."""
+        if maximum <= 0:
+            return
+        self.loading_bar.setRange(0, maximum)
+        self.loading_bar.setValue(value)
+        self.loading_label.setText(f"Loading images... ({value}/{maximum})")
+        QApplication.processEvents()
+
+    # ------------------------------------------------------------------
+    # CORE LOGIC
+    # ------------------------------------------------------------------
+
+    def refresh_layout(self):
+        """Re-reads files from disk and rebuilds the current view (e.g. after a re-render)."""
+        if not self.root:
+            return
+        self.execute_current_layout()
 
     def open_folder(self):
         folder = QFileDialog.getExistingDirectory(self)
@@ -97,23 +226,24 @@ class MainWindow(QMainWindow):
         """Initializes and activates the selected viewing strategy class structure."""
         self.clear()
         selected_mode_text = self.view_mode_box.currentText()
-        
-        # Instantiate the new strategy object dynamically
+
         self.current_strategy = self.view_strategies[selected_mode_text](self)
-        
-        # Allow the new strategy to adjust relevant toolbar widgets
         self.current_strategy.setup_ui(None)
-        
-        # Load up the workspace layout maps
+
         self.execute_current_layout()
 
     def execute_current_layout(self):
         """Forces container clearing processes before invoking strategic layouts safely."""
         if not self.root:
             return
+
         self.clear()
+        self.show_loading("Loading images...")
+
         self.current_strategy.load_layout()
+
         self.update_global_heights(self.global_height_slider.value())
+        self.show_content()
 
     def clear(self):
         while self.case_layout.count():

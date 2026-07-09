@@ -40,8 +40,9 @@ class SingleKStrategy(BaseViewStrategy):
         path = os.path.join(self.window.root, k)
         cases = sorted([c for c in os.listdir(path) if os.path.isdir(os.path.join(path, c))])
 
+        total = len(cases)
         case_rows = []
-        for c in cases:
+        for i, c in enumerate(cases):
             folder = os.path.join(path, c)
             files = sorted([
                 os.path.join(folder, f) for f in os.listdir(folder)
@@ -50,6 +51,7 @@ class SingleKStrategy(BaseViewStrategy):
 
             widget = TestCaseWidget(self.window.root, [k], c, title_mode="filename", files_list=files)
             case_rows.append((c, widget))
+            self.window.report_progress(i + 1, total)
 
         case_rows.sort(key=lambda x: self._get_sort_priority(x[1].row_color_state), reverse=True)
 
@@ -104,10 +106,12 @@ class CrossKStrategy(BaseViewStrategy):
             for case_name in sorted(frequency_buckets[count]):
                 sorted_prioritized_cases.append((case_name, count))
 
+        total = len(sorted_prioritized_cases)
         case_rows = []
-        for c, count in sorted_prioritized_cases:
+        for i, (c, count) in enumerate(sorted_prioritized_cases):
             widget = TestCaseWidget(self.window.root, k_folders, c, title_mode="parent_k")
             case_rows.append((c, count, widget))
+            self.window.report_progress(i + 1, total)
 
         case_rows.sort(key=lambda x: self._get_sort_priority(x[2].row_color_state), reverse=True)
 
