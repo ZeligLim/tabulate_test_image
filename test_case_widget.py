@@ -5,13 +5,27 @@ from image_panel import ImagePanel
 
 class TestCaseWidget(QWidget):
 
-    def __init__(self, root_folder, k_list, case_name, title_mode="filename", files_list=None):
+    def __init__(self, root_folder, k_list, case_name, title_mode="filename", files_list=None, original_file=None):
         super().__init__()
         self.setStyleSheet("background-color: transparent;")
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 5, 0, 15)
         self.panels = []
+
+        # --- ORIGINAL (RAW) IMAGE — shown leftmost, matched by index by the caller ---
+        # original_file is None entirely if the feature isn't applicable to this workspace
+        # (no loose TIFFs found at the workspace root). "" or a missing path means the
+        # feature IS active but this particular case has no matching original.
+        if original_file is not None:
+            has_match = bool(original_file) and os.path.exists(original_file)
+            display_path = original_file if has_match else os.path.join(root_folder, "(no matching original)")
+            orig_panel = ImagePanel(display_path, title_mode="filename", is_na=not has_match)
+            orig_panel.title.setText(
+                f"[ORIGINAL] {os.path.basename(original_file)}" if has_match else "[ORIGINAL] N/A"
+            )
+            orig_panel.setStyleSheet("border: 1px solid #4488ff;")
+            self.panels.append(orig_panel)
 
         # --- OLD VIEW MODE ---
         if files_list is not None:
@@ -40,6 +54,7 @@ class TestCaseWidget(QWidget):
                     self.row_color_state = "orange"
 
         # Apply visual border styling to panels matching the alert states
+        # (this intentionally overrides the blue "original" border above when negative)
         for p in self.panels:
             if getattr(p, "is_negative", False):
                 if self.row_color_state == "red":

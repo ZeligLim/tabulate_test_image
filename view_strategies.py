@@ -4,6 +4,23 @@ from PySide6.QtWidgets import QLabel
 from test_case_widget import TestCaseWidget
 
 
+def _discover_root_originals(root):
+    """
+    Loose TIFF files sitting directly in the workspace root (siblings of the K folders,
+    e.g. k1/k2/k3). Returns a dict mapping filename-without-extension -> full path, so
+    a case named "32_bottom_..." matches the original file "32_bottom_....tiff" exactly.
+    """
+    if not root:
+        return {}
+    result = {}
+    for f in os.listdir(root):
+        full = os.path.join(root, f)
+        if os.path.isfile(full) and f.lower().endswith((".tif", ".tiff")):
+            stem = os.path.splitext(f)[0]
+            result[stem] = full
+    return result
+
+
 class BaseViewStrategy:
     def __init__(self, main_window):
         self.window = main_window
@@ -39,6 +56,7 @@ class SingleKStrategy(BaseViewStrategy):
 
         path = os.path.join(self.window.root, k)
         cases = sorted([c for c in os.listdir(path) if os.path.isdir(os.path.join(path, c))])
+        originals = _discover_root_originals(self.window.root)
 
         total = len(cases)
         case_rows = []
@@ -49,7 +67,14 @@ class SingleKStrategy(BaseViewStrategy):
                 if f.lower().endswith((".tif", ".tiff"))
             ])[:3]
 
-            widget = TestCaseWidget(self.window.root, [k], c, title_mode="filename", files_list=files)
+            original_file = None
+            if originals:
+                original_file = originals.get(c, "")
+
+            widget = TestCaseWidget(
+                self.window.root, [k], c, title_mode="filename",
+                files_list=files, original_file=original_file
+            )
             case_rows.append((c, widget))
             self.window.report_progress(i + 1, total)
 
@@ -107,9 +132,18 @@ class CrossKStrategy(BaseViewStrategy):
                 sorted_prioritized_cases.append((case_name, count))
 
         total = len(sorted_prioritized_cases)
+        originals = _discover_root_originals(self.window.root)
+
         case_rows = []
         for i, (c, count) in enumerate(sorted_prioritized_cases):
-            widget = TestCaseWidget(self.window.root, k_folders, c, title_mode="parent_k")
+            original_file = None
+            if originals:
+                original_file = originals.get(c, "")
+
+            widget = TestCaseWidget(
+                self.window.root, k_folders, c, title_mode="parent_k",
+                original_file=original_file
+            )
             case_rows.append((c, count, widget))
             self.window.report_progress(i + 1, total)
 
