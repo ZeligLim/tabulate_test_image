@@ -168,6 +168,19 @@ class MainWindow(QMainWindow):
 
         top.addWidget(slider_label)
         top.addWidget(self.global_height_slider)
+
+        width_label = QLabel("Panel Width:")
+        width_label.setStyleSheet("color: white; margin-left: 15px;")
+
+        self.global_width_slider = QSlider(Qt.Horizontal)
+        self.global_width_slider.setRange(200, 1200)
+        self.global_width_slider.setValue(500)
+        self.global_width_slider.setFixedWidth(250)
+        self.global_width_slider.valueChanged.connect(self.update_global_widths)
+
+        top.addWidget(width_label)
+        top.addWidget(self.global_width_slider)
+
         top.addStretch()
 
         layout.addLayout(top)
@@ -270,6 +283,7 @@ class MainWindow(QMainWindow):
         self.current_strategy.load_layout()
 
         self.update_global_heights(self.global_height_slider.value())
+        self.update_global_widths(self.global_width_slider.value())
         self.show_content()
 
     def clear(self):
@@ -286,6 +300,10 @@ class MainWindow(QMainWindow):
     def update_global_heights(self, value):
         for p in self.panels:
             p.setFixedHeight(value)
+
+    def update_global_widths(self, value):
+        for p in self.panels:
+            p.setFixedWidth(value)
 
 
 if __name__ == "__main__":
