@@ -1,7 +1,13 @@
 import os
+import re
 from collections import defaultdict
 from PySide6.QtWidgets import QLabel
 from test_case_widget import TestCaseWidget
+
+
+def _natural_sort_key(name):
+    """Sorts 'k1', 'k2', 'k10' in numeric order instead of alphabetical ('k1','k10','k2')."""
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r'(\d+)', name)]
 
 
 def _discover_root_originals(root):
@@ -43,7 +49,7 @@ class SingleKStrategy(BaseViewStrategy):
             ks = sorted([
                 k for k in os.listdir(self.window.root)
                 if os.path.isdir(os.path.join(self.window.root, k))
-            ])
+            ], key=_natural_sort_key)
             self.kbox.addItems(ks)
 
     def _get_sort_priority(self, state):
@@ -110,7 +116,7 @@ class CrossKStrategy(BaseViewStrategy):
 
         k_folders = sorted([
             k for k in os.listdir(self.window.root) if os.path.isdir(os.path.join(self.window.root, k))
-        ])
+        ], key=_natural_sort_key)
         if not k_folders:
             return
 
