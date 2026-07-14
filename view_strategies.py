@@ -43,6 +43,13 @@ class SingleKStrategy(BaseViewStrategy):
     def setup_ui(self, top_layout):
         self.kbox = self.window.strategy_combobox
         self.kbox.show()
+
+        # Populating the combobox (clear + addItems) fires currentTextChanged,
+        # which is wired to execute_current_layout(). Without blocking signals here,
+        # that fire plus the explicit execute_current_layout() call right after
+        # setup_ui() returns (in switch_view_strategy) causes the whole folder to
+        # load twice. Block signals for the repopulation only.
+        self.kbox.blockSignals(True)
         self.kbox.clear()
 
         if self.window.root:
@@ -51,6 +58,8 @@ class SingleKStrategy(BaseViewStrategy):
                 if os.path.isdir(os.path.join(self.window.root, k))
             ], key=_natural_sort_key)
             self.kbox.addItems(ks)
+
+        self.kbox.blockSignals(False)
 
     def _get_sort_priority(self, state):
         return {"red": 2, "orange": 1, "normal": 0}.get(state, 0)

@@ -151,12 +151,6 @@ class MainWindow(QMainWindow):
         self.strategy_combobox.currentTextChanged.connect(self.execute_current_layout)
         top.addWidget(self.strategy_combobox)
 
-        self.roi_btn = QPushButton("Enable ROI")
-        self.roi_btn.setStyleSheet("background-color: #333333; color: white; padding: 6px;")
-        self.roi_btn.setCheckable(True)
-        self.roi_btn.clicked.connect(self.toggle_roi)
-        top.addWidget(self.roi_btn)
-
         slider_label = QLabel("Panel Height:")
         slider_label.setStyleSheet("color: white; margin-left: 15px;")
 
@@ -292,10 +286,6 @@ class MainWindow(QMainWindow):
             if item.widget():
                 item.widget().deleteLater()
         self.panels.clear()
-
-    def toggle_roi(self, state):
-        for p in self.panels:
-            p.enable_roi(state)
 
     def update_global_heights(self, value):
         for p in self.panels:

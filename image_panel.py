@@ -2,7 +2,7 @@ import os
 import numpy as np
 import tifffile
 import pyqtgraph as pg
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt
 
 
@@ -41,11 +41,26 @@ class ImagePanel(QWidget):
 
         self.title = QLabel(display_title)
         self.title.setStyleSheet("font-size: 13px; font-weight: bold; padding-bottom: 4px; color: #aaaaaa;")
-        main_layout.addWidget(self.title)
+
+        title_row = QHBoxLayout()
+        title_row.addWidget(self.title, stretch=1)
+
+        self.roi_btn = QPushButton("ROI")
+        self.roi_btn.setCheckable(True)
+        self.roi_btn.setFixedSize(40, 22)
+        self.roi_btn.setStyleSheet(
+            "QPushButton { background-color: #333333; color: white; font-size: 10px; border-radius: 3px; }"
+            "QPushButton:checked { background-color: #cc3333; }"
+        )
+        self.roi_btn.toggled.connect(self.enable_roi)
+        title_row.addWidget(self.roi_btn)
+
+        main_layout.addLayout(title_row)
 
         content_layout = QHBoxLayout()
 
         if self.is_na:
+            self.roi_btn.setVisible(False)
             self.na_label = QLabel("N/A")
             self.na_label.setAlignment(Qt.AlignCenter)
             self.na_label.setStyleSheet(
@@ -104,6 +119,7 @@ class ImagePanel(QWidget):
 
             except Exception as e:
                 self.is_na = True
+                self.roi_btn.setVisible(False)
                 err_label = QLabel(f"Load Error:\n{e}")
                 err_label.setAlignment(Qt.AlignCenter)
                 err_label.setWordWrap(True)
